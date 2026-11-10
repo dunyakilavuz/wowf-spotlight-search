@@ -40,7 +40,15 @@
     Winterfall Shaman farm when reasonably nearby. Check both #1710 and Kyleen's #223914
     and confirm actual purchase/use restrictions. A nearby mob may still beat a vendor
     on another continent or vastly farther away. Vendor stock is not guaranteed.
-15. Optional: enable Lua errors with `/console scriptErrors 1`, reproduce any error and
+15. Confirm the gold/blue logo in the addon list and palette header. Check item icons,
+    trainer/vendor/flight/inn/bank/AH/repair/stable/generic NPC glyphs and mining/herb/
+    chest/mailbox/generic object glyphs against docs/ICONS.md. Some object types are
+    inferred from English names; unknown new objects should remain generic.
+16. Search an uncached item: question mark first, actual icon when data arrives, without
+    freezing input. Type a different query before it arrives: an old response must not
+    overwrite the new row. Confirm source badges on items and no leftover badge on NPCs.
+    AH? text and uncertainty warnings must remain readable with the new icon layout.
+17. Optional: enable Lua errors with `/console scriptErrors 1`, reproduce any error and
     share the full error/stack plus the exact query and location. `/reload` after updates.
 
 Offline stub tests cannot prove frame appearance, actual Forever map transforms,

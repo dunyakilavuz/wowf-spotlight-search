@@ -2,7 +2,7 @@
 local _, namespace = ...
 local SL = namespace or {}
 _G.Searchlight = SL
-SL.version = "0.1.1"
+SL.version = "0.1.2"
 SL.DB = {}
 SL.MAX_RESULTS = 10
 SL.MIN_QUERY_LENGTH = 2

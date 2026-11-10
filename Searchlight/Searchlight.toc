@@ -1,6 +1,7 @@
 ## Interface: 16001
 ## Title: Searchlight
-## Version: 0.1.1
+## IconTexture: Interface\AddOns\Searchlight\Media\Icon
+## Version: 0.1.2
 ## Author: Searchlight contributors
 ## Notes: Spotlight-like NPC, item and object search with nearest-source waypoints.
 ## OptionalDeps: TomTom
@@ -15,6 +16,7 @@ Data/Index04.lua
 Data/Index05.lua
 Search.lua
 Navigation.lua
+Icons.lua
 UI.lua
 Core.lua
 Bindings.xml

@@ -1,4 +1,4 @@
-# Searchlight v0.1.1
+# Searchlight v0.1.2
 
 ## Install
 
@@ -14,6 +14,8 @@ The shipped data/TOC targets **Forever Interface 16001**, not unchanged Classic 
 - Type 2+ English characters; Up/Down selects, Enter or click sets a waypoint, Esc closes.
 - Examples: `fishing trainer`, `flight master`, `repair`, `innkeeper`, `mailbox`, `bank`,
   `mining trainer`, `mage trainer`, `linen cloth`, `copper vein`, `thunder bluff`.
+- Rows have item icons, NPC-role glyphs and object hints; item-source badges distinguish
+  vendors, mobs, objects and auctioneers. Uncached icons update without blocking search.
 - Items show their source and ID. Vendors are preferred to incidental low-chance drops
   when reasonably near; very distant vendors do not always beat a nearby physical drop.
 - Original `elixir of the mongoose` (#13452) / `swiftness potion` (#2459) with no usable

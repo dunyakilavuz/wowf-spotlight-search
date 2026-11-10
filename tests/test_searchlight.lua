@@ -60,7 +60,9 @@ function CreateFrame(kind,name,parent) return newFrame(kind,name,parent) end
 function Frame:CreateFontString() return newFrame("FontString",nil,self) end
 function Frame:CreateTexture() return newFrame("Texture",nil,self) end
 function Frame:SetScript(event,fn) self.scripts[event]=fn end
-function Frame:RegisterEvent() end
+function Frame:RegisterEvent(event) self.events=self.events or {};self.events[event]=true end
+function Frame:SetTexture(value) self.texture=value;return true end
+function Frame:SetTexCoord(...) self.texCoord={...} end
 function Frame:Show()
     local changed=not self.shown;self.shown=true
     if changed and self.scripts.OnShow then self.scripts.OnShow(self) end
@@ -410,6 +412,117 @@ check(SL.UI.results[1].sourceType=="Auction House","AH result rendered in palett
 check(SL.UI.rows[1].tag:GetText()=="AH?","AH suggestion visibly labeled")
 check(SL.UI.status:GetText():find("unverified",1,true),"AH warning visible without hover")
 SL.UI.frame:Hide()
+
+-- Icon policy and API compatibility: rows never wait for the item cache.
+local I=SL.Icons
+local iconRequests,itemIcons,legacyIcons={},{},{}
+local modernCalls,legacyCalls=0,0
+C_Item={GetItemIconByID=function(id) modernCalls=modernCalls+1;return itemIcons[id] end,
+    RequestLoadItemDataByID=function(id) iconRequests[id]=(iconRequests[id] or 0)+1 end}
+function GetItemIcon(id) legacyCalls=legacyCalls+1;return legacyIcons[id] end
+local function iconRecord(kind,name,flags,id) return {kind=kind,name=name,flags=flags or 0,id=id or 900100,title=""} end
+for _,case in ipairs({{16,"trainer"},{4,"vendor"},{8,"flight"},{128,"innkeeper"},{256,"banker"},
+    {4096,"auctioneer"},{16384,"repair"},{8192,"stable"},{0,"npc"}}) do
+    local rec=iconRecord("n","Example",case[1])
+    local icon,secondary=I:ForResult({record=rec})
+    check(I:Role(rec)==case[2] and icon==I.roles[case[2]] and secondary==nil,"NPC role icon: "..case[2])
+end
+check(I:Role(iconRecord("n","Trainer and vendor",20))=="trainer","specific service beats merchant flag")
+check(I:Role(iconRecord("n","Repairs and vendor",16388))=="repair","repair beats merchant flag")
+for _,case in ipairs({{"Copper Vein","mining"},{"Rich Thorium Vein","mining"},{"Iron Deposit","mining"},
+    {"Silverleaf","herb"},{"Khadgar's Whisker","herb"},{"Mountain Silversage","herb"},{"Solid Chest","chest"},
+    {"Mailbox","mailbox"},{"Mail Box","mailbox"},{"Ancient Mechanism","object"},{"Chester's Statue","object"}}) do
+    local rec=iconRecord("o",case[1])
+    check(I:Role(rec)==case[2] and I:ForResult({record=rec})==I.roles[case[2]],"object type hint: "..case[1])
+end
+itemIcons[900100]=134414
+check(I:ItemTexture(900100)==134414,"modern icon fileID")
+check(not iconRequests[900100],"cached item does not request data")
+for sourceType,texture in pairs(I.sources) do
+    local primary,secondary=I:ForResult({record=iconRecord("i","Test",0,900100),sourceType=sourceType})
+    check(primary==134414 and secondary==texture,"source badge "..sourceType)
+end
+legacyIcons[900101]="Interface\\Icons\\INV_Potion_54"
+check(I:ItemTexture(900101)==legacyIcons[900101],"legacy lookup when modern cache misses")
+local modern=C_Item
+C_Item=nil
+check(I:ItemTexture(900101)==legacyIcons[900101],"legacy-only client")
+local legacyGetter=GetItemIcon
+GetItemIcon=nil
+check(I:ItemTexture(900102)==I.FALLBACK,"missing item APIs")
+C_Item={GetItemIconByID=function() error("unsupported") end}
+GetItemIcon=legacyGetter
+check(I:ItemTexture(900101)==legacyIcons[900101],"throwing modern API does not block legacy lookup")
+C_Item=modern
+check(I:ItemTexture(900103)==I.FALLBACK and iconRequests[900103]==1,"uncached icon requests data once")
+I:ItemTexture(900103);I:ItemTexture(900103)
+check(iconRequests[900103]==1,"refreshes do not flood requests")
+local savedGetTime=GetTime
+GetTime=function() return savedGetTime()+31 end
+I:ItemTexture(900103)
+check(iconRequests[900103]==2,"failed/missing data can retry after cooldown")
+GetTime=savedGetTime
+local infoCalls=0
+C_Item.RequestLoadItemDataByID=nil
+GetItemInfo=function() infoCalls=infoCalls+1 end
+I:ItemTexture(900104)
+check(infoCalls==1,"legacy GetItemInfo warms cache when explicit load API is absent")
+GetItemInfo=nil
+C_Item.RequestLoadItemDataByID=function(id) iconRequests[id]=(iconRequests[id] or 0)+1 end
+check(I:ItemTexture(-1)==I.FALLBACK and I:ItemTexture(nil)==I.FALLBACK,"invalid IDs remain safe")
+itemIcons[900106]=134400
+check(I:ItemTexture(900106)==I.FALLBACK and iconRequests[900106]==1,"question-mark fileID is not cached as a resolved icon")
+itemIcons[900107]=I.FALLBACK
+check(I:ItemTexture(900107)==I.FALLBACK and iconRequests[900107]==1,"question-mark path also requests real item data")
+for id=900200,900330 do I:ItemTexture(id) end
+I:ItemTexture(900200)
+check(iconRequests[900200]==2,"retry bookkeeping evicts old IDs instead of growing unbounded")
+local requestsBefore=0
+for _,count in pairs(iconRequests) do requestsBefore=requestsBefore+count end
+SL.Search:Run("elixir of the mongoose")
+local requestsAfter=0
+for _,count in pairs(iconRequests) do requestsAfter=requestsAfter+count end
+check(requestsAfter==requestsBefore,"catalog search itself performs no icon requests")
+local missingTexture=newFrame("Texture")
+missingTexture.SetTexture=function(self,value)
+    if value~=I.FALLBACK then return false end
+    self.texture=value;return true
+end
+I:Apply(missingTexture,"bad-path")
+check(missingTexture.texture==I.FALLBACK,"rejected texture falls back")
+-- A cache event updates ONLY the matching visible row; no async stale-row writes.
+SL.UI:Open("elixir of the mongoose")
+frames=0
+while (SL.UI.pending or SL.UI.job) and frames<1000 do SL.UI:Update(0.05);frames=frames+1 end
+check(SL.UI.frame.events.GET_ITEM_INFO_RECEIVED and SL.UI.frame.events.ITEM_DATA_LOAD_RESULT,"both load events registered")
+local row=SL.UI.rows[1]
+check(row.result.record.id==13452 and row.icon.texture==I.FALLBACK,"uncached item row initially shows question mark")
+check(row.sourceIcon:IsShown() and row.sourceIcon.texture==I.sources["Auction House"],"AH source badge visible")
+local firstResult=row.result
+row.result={record=iconRecord("i","Different item",0,900105)}
+itemIcons[13452]=134810
+SL.UI.frame.scripts.OnEvent(SL.UI.frame,"ITEM_DATA_LOAD_RESULT",13452,true)
+check(row.icon.texture==I.FALLBACK,"late response cannot overwrite a recycled row")
+row.result=firstResult
+SL.UI.frame.scripts.OnEvent(SL.UI.frame,"GET_ITEM_INFO_RECEIVED",13452,true)
+check(row.icon.texture==134810,"legacy event repaints matching row")
+itemIcons[13452]=134811
+SL.UI.frame.scripts.OnEvent(SL.UI.frame,"ITEM_DATA_LOAD_RESULT",13452,true)
+check(row.icon.texture==134811,"modern event repaints matching row")
+SL.UI.frame.scripts.OnEvent(SL.UI.frame,"ITEM_DATA_LOAD_RESULT",13452,false)
+check(row.icon.texture==134811,"failure event cannot blank an already valid icon")
+SL.UI.frame:Hide()
+itemIcons[13452]=134812
+SL.UI.frame.scripts.OnEvent(SL.UI.frame,"ITEM_DATA_LOAD_RESULT",13452,true)
+check(row.icon.texture==134811,"hidden palette is not updated asynchronously")
+SL.UI:Open("fishing trainer")
+frames=0
+while (SL.UI.pending or SL.UI.job) and frames<1000 do SL.UI:Update(0.05);frames=frames+1 end
+check(SL.UI.rows[1].icon.texture==I.roles.trainer,"trainer row icon rendered")
+check(not SL.UI.rows[1].sourceIcon:IsShown() and not SL.UI.rows[1].sourceIconBorder:IsShown(),"recycled NPC row clears source badge")
+SL.UI.frame:Hide()
+-- Restore APIs; performance samples below do not request any icons.
+C_Item=nil;GetItemIcon=nil
 
 local warmTimes={}
 for _,query in ipairs({"fishing trainer","linen cloth","copper vein","flight master","thunder bluff","elixir of the mongoose","greater healing potion"}) do

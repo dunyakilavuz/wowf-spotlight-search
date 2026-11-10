@@ -1,4 +1,6 @@
-# Searchlight v0.1.1
+<p align="center"><img src="docs/logo.png" alt="Searchlight: gold magnifier and arcane-blue beam" width="128" height="128"></p>
+
+# Searchlight v0.1.2
 
 **Spotlight for Azeroth:** Ctrl+Space, type an English NPC, item, object or service,
 then Enter/click to waypoint to a nearby known source (reliable vendors preferred).
@@ -34,6 +36,9 @@ optional; native pins work when the client/map exposes the relevant APIs.
 - Partial words work: `fishing tra`. Words match at their starts, not fuzzy substrings.
 - City/zone names work too: `thunder bluff`, `thunder bl`, or
   `fishing trainer thunder bluff`. An explicit zone constrains locations to that zone.
+- Result rows include real item icons, NPC service glyphs and object-type hints.
+  A small badge on item icons distinguishes vendor, mob drop, object loot and AH sources.
+  Uncached items show a question mark immediately, then update as item data arrives.
 - Item results show **Vendor / Mob drop / Object loot / Auction House** and the source's
   English name. Missing physical coordinates trigger a faction-safe AH suggestion.
 - `elixir of the mongoose` (item #13452) and original `swiftness potion` (#2459) now
@@ -116,7 +121,7 @@ are not evaluated. See [data provenance](THIRD_PARTY_NOTICES.md) and
 - About **16.8 MiB retained** for the database/modules and **17.3 MiB warm** including
   palette/cache in standalone Lua 5.1 tests. This is an estimate, not in-client addon
   memory accounting. No addon SavedVariables. Generated data is approximately **9.0 MiB
-  on disk**; the complete installed addon is approximately **9.1 MiB**.
+  on disk**; the complete installed addon is approximately **9.2 MiB**.
 - The data is eagerly loaded, not a separate load-on-demand addon. At this size, retaining
   a single install folder and avoiding first-open disk/parsing stalls is the v1 tradeoff.
   Deduplicated strings reduce memory instead of materializing all spawns/index postings
@@ -171,7 +176,9 @@ Searchlight/              Installable addon folder
   Init.lua, Core.lua      Namespace, slash commands, safe default key binding
   Search.lua              Compact-row decoding, indexed queries, nearest-source ranking
   Navigation.lua          Map projections and native/TomTom waypoints
+  Icons.lua               Legacy role glyphs and guarded async item icon lookups
   UI.lua                  Search palette and cooperative live updates
+  Media/Icon.tga          Original 128px gold/arcane-blue addon logo
   Data/                   Generated Lua database/index + coverage.json
   LICENSE                 GPLv3 text
   THIRD_PARTY_NOTICES.md   Attribution and historical licensing caveat
@@ -179,9 +186,24 @@ vendor/QuestieDB/          Exact corresponding upstream data sources and origina
 tools/                    Python builder/check runner, sandboxed Lua adapter, source lock
   overlay.example.json    Empty, provenance-required overlay template
 tests/                    Offline Lua harness and Python compiler/integrity tests
-docs/                     Validation, overlays, client test checklist and research notes
+docs/                     Validation, icon manifest, 512px logo.png and client/data notes
 LICENSE                   GPLv3 text
 ```
+
+## Logo and icon assets
+
+The original gold magnifier / arcane-blue search beam appears in the addon list and
+palette header. Preview: [512px PNG](docs/logo.png). The shipped `Media/Icon.tga` is
+128x128, uncompressed 32-bit BGRA with 8-bit alpha and bottom-left origin. To regenerate
+it from the canonical PNG, run `python3 tools/build_media.py` (this optional artwork tool
+requires Pillow; normal DB builds/tests still use only Python's standard library).
+
+NPC/object/source icons reference legacy built-in game textures; Blizzard artwork is
+not bundled. Object classification uses conservative English-name hints because the
+compact database has no game-object type; unknown new objects keep a generic glyph.
+See [the complete texture manifest and confidence notes](docs/ICONS.md). All icon APIs
+are optional/guarded, missing textures fall back to a question mark when detectable,
+and only visible item rows request data. No SavedVariables/icon catalog is added.
 
 ## Known limitations
 

@@ -45,6 +45,17 @@ function UI:Accept(index)
     if ok then self.frame:Hide() else self.status:SetText(message) end
 end
 
+function UI:RefreshItemIcon(itemID)
+    if not self.rows or not self.frame:IsShown() then return end
+    for _,row in ipairs(self.rows) do
+        local result=row.result
+        -- An asynchronous response must never paint over a recycled row's new item.
+        if row:IsShown() and result and result.record.kind=="i" and result.record.id==itemID then
+            SL.Icons:Apply(row.icon,SL.Icons:ItemTexture(itemID,false))
+        end
+    end
+end
+
 function UI:Render(results,total,context)
     local selected=self.results[self.selected]
     local keep=selected and selected.index
@@ -53,6 +64,14 @@ function UI:Render(results,total,context)
         local result=results[i]
         row.result=result
         if result then
+            local icon,sourceIcon=SL.Icons:ForResult(result)
+            SL.Icons:Apply(row.icon,icon)
+            if sourceIcon then
+                SL.Icons:Apply(row.sourceIcon,sourceIcon)
+                row.sourceIcon:Show(); row.sourceIconBorder:Show()
+            else
+                row.sourceIcon:Hide(); row.sourceIconBorder:Hide()
+            end
             row.name:SetText(result.record.name)
             row.detail:SetText(SL.Search:Describe(result))
             local tags={n="NPC",i="ITEM",o="OBJECT"}
@@ -136,7 +155,10 @@ function UI:Create()
         frame:SetBackdrop({edgeFile="Interface\\Buttons\\WHITE8X8",edgeSize=1})
         frame:SetBackdropBorderColor(0.22,0.50,0.63,0.9)
     end
-    local title=font(frame,"GameFontNormalSmall",20,-16,300)
+    local title=font(frame,"GameFontNormalSmall",52,-16,280)
+    local logo=frame:CreateTexture(nil,"ARTWORK")
+    logo:SetSize(24,24); logo:SetPoint("TOPLEFT",20,-10)
+    SL.Icons:Apply(logo,SL.Icons.LOGO)
     title:SetText("S E A R C H L I G H T")
     title:SetTextColor(0.40,0.85,1)
     local hint=font(frame,"GameFontDisableSmall",360,-16,315)
@@ -179,8 +201,20 @@ function UI:Create()
         row.selected=fill(row,0.12,0.29,0.39,0.75)
         row.selected:Hide()
         row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight","ADD")
-        row.name=font(row,"GameFontHighlight",12,-7,570)
-        row.detail=font(row,"GameFontDisableSmall",12,-29,655)
+        local border=row:CreateTexture(nil,"BACKGROUND")
+        border:SetSize(38,38); border:SetPoint("TOPLEFT",11,-7)
+        border:SetColorTexture(0.23,0.38,0.45,1)
+        row.icon=row:CreateTexture(nil,"ARTWORK")
+        row.icon:SetSize(36,36); row.icon:SetPoint("TOPLEFT",12,-8)
+        row.icon:SetTexCoord(0.07,0.93,0.07,0.93)
+        row.sourceIconBorder=row:CreateTexture(nil,"ARTWORK",nil,1)
+        row.sourceIconBorder:SetSize(18,18); row.sourceIconBorder:SetPoint("TOPLEFT",34,-30)
+        row.sourceIconBorder:SetColorTexture(0.015,0.025,0.04,1)
+        row.sourceIcon=row:CreateTexture(nil,"OVERLAY")
+        row.sourceIcon:SetSize(14,14); row.sourceIcon:SetPoint("TOPLEFT",36,-32)
+        row.sourceIcon:SetTexCoord(0.07,0.93,0.07,0.93)
+        row.name=font(row,"GameFontHighlight",58,-7,518)
+        row.detail=font(row,"GameFontDisableSmall",58,-29,610)
         row.tag=font(row,"GameFontNormalSmall",590,-8,78)
         row.tag:SetJustifyH("RIGHT");row.tag:SetTextColor(0.40,0.85,1)
         row:SetScript("OnClick",function() self:Accept(index) end)
@@ -201,6 +235,15 @@ function UI:Create()
     self.status=status
     status:SetPoint("BOTTOMLEFT",20,14);status:SetPoint("BOTTOMRIGHT",-20,14)
     status:SetJustifyH("LEFT");status:SetWordWrap(false)
+    -- Both implicit legacy loads and explicit modern item-data requests are handled.
+    -- Event registration is guarded for flavors without the modern event.
+    pcall(frame.RegisterEvent,frame,"GET_ITEM_INFO_RECEIVED")
+    pcall(frame.RegisterEvent,frame,"ITEM_DATA_LOAD_RESULT")
+    frame:SetScript("OnEvent",function(_,event,itemID)
+        if event=="GET_ITEM_INFO_RECEIVED" or event=="ITEM_DATA_LOAD_RESULT" then
+            self:RefreshItemIcon(itemID)
+        end
+    end)
     frame:SetScript("OnUpdate",function(_,elapsed) self:Update(elapsed) end)
     frame:SetScript("OnShow",function() edit:SetFocus();self:Queue(false) end)
     frame:SetScript("OnHide",function()
