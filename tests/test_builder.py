@@ -43,6 +43,16 @@ class BuilderTests(unittest.TestCase):
         for name,size in coverage['files'].items():
             self.assertEqual((ROOT/'Searchlight'/name).stat().st_size,size)
 
+    def test_acquisition_metadata_coverage(self):
+        coverage=json.loads((ROOT/'Searchlight/Data/coverage.json').read_text())
+        self.assertEqual(coverage['counts']['auctioneers'],29)
+        self.assertGreater(coverage['counts']['drop_rate_links'],15000)
+        self.assertGreater(coverage['counts']['items_with_drop_rates'],1200)
+        database=(ROOT/'Searchlight/Data/Database.lua').read_text()
+        for name in ('auctioneers','npcRanks','questItems','dropRates'):
+            self.assertIn(f'D.{name} = {{',database)
+        self.assertIn('schema=3',database)
+
     def test_no_addon_saved_variables(self):
         toc=(ROOT/'Searchlight/Searchlight.toc').read_text()
         self.assertNotIn('SavedVariables:',toc)

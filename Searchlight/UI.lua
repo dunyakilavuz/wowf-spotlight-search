@@ -25,6 +25,16 @@ function UI:Select(index)
     if #self.results==0 then self.selected=1; return end
     self.selected=((index-1)%#self.results)+1
     for i,row in ipairs(self.rows) do row.selected:SetShown(i==self.selected) end
+    if self.total and self.total>0 then
+        local result=self.results[self.selected]
+        local note=self.context.reason or "Source reliability + distance; straight-line, not a route"
+        if result and result.sourceType=="Auction House" then
+            note="AH suggestion only: listings/tradability unverified"
+        elseif result and result.sourceType=="Vendor" then
+            note="Vendor recorded; stock and purchase/use requirements unverified"
+        end
+        self.status:SetText(string.format("%d of %d matches | %s",#self.results,self.total,note))
+    end
 end
 
 function UI:Accept(index)
@@ -38,7 +48,7 @@ end
 function UI:Render(results,total,context)
     local selected=self.results[self.selected]
     local keep=selected and selected.index
-    self.results=results
+    self.results,self.total,self.context=results,total,context
     for i,row in ipairs(self.rows) do
         local result=results[i]
         row.result=result
@@ -46,7 +56,7 @@ function UI:Render(results,total,context)
             row.name:SetText(result.record.name)
             row.detail:SetText(SL.Search:Describe(result))
             local tags={n="NPC",i="ITEM",o="OBJECT"}
-            row.tag:SetText(tags[result.record.kind] or "")
+            row.tag:SetText(result.sourceType=="Auction House" and "AH?" or (tags[result.record.kind] or ""))
             row:Show()
             if result.index==keep then self.selected=i end
         else
@@ -59,9 +69,6 @@ function UI:Render(results,total,context)
         self.status:SetText("Type 2+ characters: fishing trainer, linen cloth, copper vein...")
     elseif total==0 then
         self.status:SetText("No matches. Try an English name, profession or service.")
-    else
-        local note=context.reason or "Nearest known spawn; straight-line distance, not a travel route"
-        self.status:SetText(string.format("%d of %d matches | %s",#results,total,note))
     end
 end
 

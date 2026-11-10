@@ -76,3 +76,23 @@ See vendored:
 
 No additional Wowhead dataset was scraped or silently relicensed. An optional build-time
 reviewed overlay is supported for independently verified GPLv3-compatible additions.
+
+## v0.1.1 acquisition-source follow-up
+
+Only the existing pinned, licensed vendor sources were used; no additional data was
+scraped or downloaded. The source adapter already reads common item-drop percentages;
+v0.1.1 emits usable 0..100 rates and honors manual reference selectors/zero overrides.
+These cover only a subset of items, not all incidental loot or all Forever changes.
+NPC `rank` and explicit auctioneer flags/faction/spawns are also retained as supplements.
+
+Inspected the item schema and extracted fields across the pinned dataset: there is no
+usable mapping from an output item to its creating spell, profession and required skill.
+A recipe's teaching spell is not such a mapping. No other crafting dataset is currently
+vendored, so crafted-by text and trainer alternatives were deliberately skipped rather
+than guessing `Alchemy (skill N)`. Future additions need actual output/skill relationships,
+GPLv3-compatible permission and the same input-lock/provenance review as other data.
+
+No bonding/tradability, vendor stock quantities or spawn-frequency metadata is available.
+Quest items can be excluded from AH suggestions by class, but remaining items are not
+asserted to be tradeable/listed. Eric "The Swift" is rank-1 elite in an instance, with no
+usable outdoor coordinates: do not falsely call him a rare or manufacture an entrance.

@@ -105,6 +105,7 @@ function Nav:SetWaypoint(result)
         return false,"No trustworthy coordinates are recorded for this result (instances may only have presence data)."
     end
     local title=result.record.name
+    if result.record.kind=="i" then title=title.." [item #"..result.record.id.."]" end
     if source and result.record.kind=="i" then title=title.." - "..(sourceType or "Source")..": "..source.name end
     local native,tomtom=false,false
     if C_Map and C_Map.SetUserWaypoint and UiMapPoint and UiMapPoint.CreateFromCoordinates then
@@ -132,7 +133,8 @@ function Nav:SetWaypoint(result)
     if native or tomtom then
         return true,string.format("%s: %s (%.1f, %.1f)%s",title,location.zone,location.x*100,
             location.y*100,(tomtom and " - TomTom arrow enabled" or "")..
-            (context.reason and " - player position unavailable; nearest not guaranteed" or ""))
+            (context.reason and " - player position unavailable; nearest not guaranteed" or "")..
+            (sourceType=="Auction House" and " - auction availability/tradability unverified" or ""))
     end
     return false,string.format("Cannot place a waypoint on this client/map. %s: %s (%.1f, %.1f). Try TomTom.",
         title,location.zone,location.x*100,location.y*100)

@@ -121,7 +121,7 @@ end
 check(#SL.Search:Run("ishing trainer")==0,"word-start prefix, not substring scan")
 local qTimes={}
 for _,query in ipairs({"fishing trainer","linen cloth","copper vein","flight master","thunder bluff",
-    "fishing tra","mage trainer","blacksmithing trainer","repair","innkeeper","mailbox","bank"}) do
+    "elixir of the mongoose","swiftness potion","greater healing potion","fishing tra","mage trainer","blacksmithing trainer","repair","innkeeper","mailbox","bank"}) do
     local start=os.clock()
     local results,total=SL.Search:Run(query)
     local ms=(os.clock()-start)*1000
@@ -129,7 +129,7 @@ for _,query in ipairs({"fishing trainer","linen cloth","copper vein","flight mas
     check(#results>0 and #results<=10,query.." must return capped results")
     for i=2,#results do
         local a,b=results[i-1],results[i]
-        check(a.tier<b.tier or (a.tier==b.tier and a.metric<=b.metric),"distance order: "..query)
+        check(a.tier<b.tier or (a.tier==b.tier and (a.matchRank<b.matchRank or (a.matchRank==b.matchRank and a.metric<=b.metric))),"acquisition order: "..query)
     end
     if query=="fishing trainer" then check(results[1].record.id==5493,"standing next to Arnold must rank him first") end
     if query=="linen cloth" then
@@ -186,6 +186,42 @@ check(source.id==90002 and sourceType=="Mob drop","nearest mob source after movi
 state.x,state.y=0.5,0.5
 loc,source,sourceType=SL.Search:Resolve(item,SL.Navigation:GetPlayerContext(),{})
 check(source.id==90003 and sourceType=="Object loot" and loc.distance==0,"nearest containing object")
+-- Vendors win at sensible travel tradeoffs, but not at unbounded distance.
+state.x,state.y=0.88,0.88
+D.dropRates[item.index]=mob.index..",100"
+local _,_,kind100,quality100=SL.Search:Resolve(item,SL.Navigation:GetPlayerContext(),{})
+check(kind100=="Mob drop" and quality100.percent==100,"guaranteed nearby drop stays useful")
+D.dropRates[item.index]=mob.index..",0.1"
+local _,_,kindLow=SL.Search:Resolve(item,SL.Navigation:GetPlayerContext(),{})
+check(kindLow=="Vendor","vendor preferred to low-probability nearby mob")
+D.dropRates[item.index]=mob.index..",0"
+local _,_,kindZero=SL.Search:Resolve(item,SL.Navigation:GetPlayerContext(),{})
+check(kindZero~="Mob drop","explicit zero drop correction must be honored")
+local lootDescription=SL.Search:Describe({record=item,location=loc,source=mob,sourceType="Mob drop",acquisition=quality100})
+check(lootDescription:find("recorded drop 100%%"),"measured drop chance shown only when available")
+D.dropRates[item.index]=nil
+D.npcRanks[mob.index]=4
+local _,_,kindRare=SL.Search:Resolve(item,SL.Navigation:GetPlayerContext(),{})
+check(kindRare=="Vendor","rare-spawn mobs penalized")
+D.npcRanks[mob.index]=nil
+-- Opposing vendors are excluded from physical item source selection.
+local horde={};for k,v in pairs(SL.Navigation:GetPlayerContext()) do horde[k]=v end;horde.faction="H"
+local _,hordeSource,hordeType=SL.Search:Resolve(item,horde,{})
+check(hordeSource.id~=vendor.id and hordeType~="Vendor","hostile vendor must not win source selection")
+local mobScore=SL.Search:SourceScore("d",{distance=100,tier=0,metric=10000},mob,nil)
+D.npcRanks[mob.index]=1
+check(SL.Search:SourceScore("d",{distance=100,tier=0,metric=10000},mob,nil)>mobScore,"elite/limited encounter penalty")
+D.npcRanks[mob.index]=nil
+local dropOnly=fixture("i",90006,"Fixture Drop Only","",0,"","","d"..mob.index)
+local _,_,dropOnlyType=SL.Search:Resolve(dropOnly,SL.Navigation:GetPlayerContext(),{})
+check(dropOnlyType=="Mob drop","AH is fallback only, not a replacement for a documented physical source")
+-- Known quest items are not suggested as auction purchases.
+local quest=fixture("i",90005,"Fixture Quest Item","",0,"","","")
+D.questItems[quest.index]=true
+check(not SL.Search:Resolve(quest,SL.Navigation:GetPlayerContext(),{}),"quest items do not get AH fallback")
+D.questItems[quest.index]=nil
+state.x,state.y=0.5,0.5
+loc,source,sourceType=SL.Search:Resolve(item,SL.Navigation:GetPlayerContext(),{})
 local stale={record=item,location=loc}
 state.x,state.y=0.1,0.1
 check(SL.Navigation:SetWaypoint(stale),"native waypoint")
@@ -240,14 +276,85 @@ for i=#D.spawns,spawnCount+1,-1 do D.spawns[i]=nil end
 for i=#D.sources,sourceCount+1,-1 do D.sources[i]=nil end
 D.zones[90001],D.zones[90002]=nil,nil
 
-local unknown
-for index in ipairs(SL.DB.rows) do
-    local record=SL.Search:GetRecord(index)
-    if record.kind=="i" and record.sources=="" then unknown=record;break end
+-- Real-data regressions: exact item names beat recipe names, duplicate IDs are
+-- not merged, and a no-coordinate crafted potion resolves to a faction-safe AH.
+check(#D.auctioneers==29,"review auctioneer coverage deliberately")
+check(D.meta.schema==3,"supplemental source metadata schema")
+local mongoose=find("i",13452)
+local swiftness=find("i",2459)
+local kyleenPotion=find("i",223914)
+local eric=find("n",6907)
+check(D.npcRanks[eric.index]==1,"Eric is an elite instance mob, NOT an invented rare spawn")
+check(eric.spawns=="","instance-only Eric presence is not a waypoint")
+local factionExamples={
+    {"Horde",1454,0.559,0.6271,8673,"Orgrimmar"},
+    {"Alliance",1453,0.6116,0.7068,15659,"Stormwind City"},
+}
+local hordeAHResult
+for _,case in ipairs(factionExamples) do
+    state.faction,state.map,state.x,state.y=case[1],case[2],case[3],case[4]
+    local context=SL.Navigation:GetPlayerContext()
+    local loc,source,sourceType=SL.Search:Resolve(mongoose,context,{})
+    check(sourceType=="Auction House" and source.id==case[5] and loc.zone==case[6],"nearest faction auctioneer: "..case[1])
+    local results=SL.Search:Run("elixir of the mongoose")
+    if case[1]=="Horde" then hordeAHResult=results[1] end
+    check(results[1].record.id==13452 and results[1].sourceType=="Auction House","exact potion must outrank recipe")
+    check(SL.Search:Describe(results[1]):find("Buy on Auction House: ",1,true),"AH description")
+    check(SL.Search:Describe(results[1]):find("Availability/tradability unverified",1,true),"do not promise a listing")
+    local beforePin=state.native
+    check(SL.Navigation:SetWaypoint(results[1]),"AH waypoint")
+    check(state.native==beforePin+1 and state.lastPoint.uiMapID==case[2],"AH pin in player's city")
+    local _,_,swiftType=SL.Search:Resolve(swiftness,context,{})
+    check(swiftType=="Auction House","Eric has no physical coordinates; swiftness falls back")
+    local potionResults=SL.Search:Run("greater healing potion")
+    check(potionResults[1].record.name=="Greater Healing Potion","exact item name before partial matches")
+    if case[1]=="Horde" then
+        check(potionResults[1].sourceType=="Vendor","Orgrimmar vendor must beat incidental drops/unverified AH variant")
+    else
+        check(potionResults[1].sourceType~="Auction House","very near physical source can beat extremely distant vendors")
+    end
+    check(potionResults[1].source.id~=7439,"not Winterfall Shaman")
+    local _,kyleen,kyleenType=SL.Search:Resolve(kyleenPotion,context,{})
+    check(kyleen and kyleen.id==222685 and kyleenType=="Vendor","Kyleen's documented potion is a distinct item ID")
+    local present={}
+    for _,r in ipairs(potionResults) do present[r.record.id]=true end
+    check(present[1710] and present[223914] and present[287977],"same-name item variants remain distinct")
+    for _,query in ipairs({"elixir of the mongoose","swiftness potion","greater healing potion"}) do
+        local r=SL.Search:Run(query)[1]
+        print("EXAMPLE "..case[1].." / "..case[6].." | "..query.." -> "..r.record.name.." | "..SL.Search:Describe(r))
+    end
+    print("EXAMPLE "..case[1].." | Kyleen variant #223914 -> "..kyleenType..": "..kyleen.name)
 end
+-- Clicking a stale Horde AH result after changing faction/continent must re-resolve.
+state.faction,state.map,state.x,state.y="Alliance",1453,0.6116,0.7068
+check(SL.Navigation:SetWaypoint(hordeAHResult),"stale Horde result must become a fresh Alliance AH pin")
+check(state.lastPoint.uiMapID==1453 and math.abs(state.lastPoint.x-0.6116)<0.00001,"fresh faction-safe coordinates")
+-- Neutral auctioneers must be eligible for BOTH factions; cities must not override
+-- an actually nearer neutral auctioneer on the same continent.
+for _,id in ipairs({8661,9857,9858}) do
+    local auctioneer=find("n",id)
+    local area,x,y=auctioneer.spawns:match("(%d+),(%d+),(%d+)")
+    for _,faction in ipairs({"Alliance","Horde"}) do
+        state.faction,state.map,state.x,state.y=faction,D.zones[tonumber(area)][1],tonumber(x)/10000,tonumber(y)/10000
+        local loc,source,sourceType=SL.Search:Resolve(mongoose,SL.Navigation:GetPlayerContext(),{})
+        check(source.id==id and sourceType=="Auction House" and loc.distance<0.001,"nearest neutral auctioneer for "..faction)
+    end
+end
+-- If faction is unavailable, only explicitly neutral auctioneers are safe.
+local _,neutral=SL.Search:Resolve(mongoose,{}, {})
+check(neutral and neutral.faction=="AH","unknown player faction -> neutral only")
+local _,_,missingPositionType=SL.Search:Resolve(mongoose,{faction="H"},{})
+check(missingPositionType=="Auction House","AH fallback without a player position remains usable")
+local _,_,scopedAHType=SL.Search:Resolve(mongoose,{faction="A",areas={[1519]=true}},{})
+check(scopedAHType=="Auction House","AH respects explicit zone scope")
+local outsideScope=SL.Search:Resolve(mongoose,{faction="A",areas={[900099]=true}},{})
+check(not outsideScope,"no auctioneer in explicit zone -> no invented coordinates")
+local savedAuctioneers=D.auctioneers
+D.auctioneers={}
 local beforeUnknown=state.native
-check(unknown and not SL.Navigation:SetWaypoint({record=unknown}),"unknown item source must not manufacture coordinates")
-check(state.native==beforeUnknown,"unknown source does not place a pin")
+check(not SL.Navigation:SetWaypoint({record=mongoose}),"no usable AH: do not manufacture coordinates")
+check(state.native==beforeUnknown,"no AH does not place a pin")
+D.auctioneers=savedAuctioneers
 
 -- Non-destructive key binding, deferred during combat; no addon SavedVariables used.
 local bindings,saved={},0
@@ -296,10 +403,16 @@ while (SL.UI.pending or SL.UI.job) and totalFrames<10000 do
 end
 check(totalFrames<10000 and #SL.UI.results>0,"incremental broad query completes")
 print(string.format("ASYNC query li: %d frames, max resume slice %.3f ms",totalFrames,maxSlice))
+SL.UI:Open("elixir of the mongoose")
+frames=0
+while (SL.UI.pending or SL.UI.job) and frames<1000 do SL.UI:Update(0.05);frames=frames+1 end
+check(SL.UI.results[1].sourceType=="Auction House","AH result rendered in palette")
+check(SL.UI.rows[1].tag:GetText()=="AH?","AH suggestion visibly labeled")
+check(SL.UI.status:GetText():find("unverified",1,true),"AH warning visible without hover")
 SL.UI.frame:Hide()
 
 local warmTimes={}
-for _,query in ipairs({"fishing trainer","linen cloth","copper vein","flight master","thunder bluff"}) do
+for _,query in ipairs({"fishing trainer","linen cloth","copper vein","flight master","thunder bluff","elixir of the mongoose","greater healing potion"}) do
     collectgarbage("collect")
     local start=os.clock()
     for _=1,20 do SL.Search:Run(query) end

@@ -128,7 +128,11 @@ load(dropPrefix.."classicItemDrops.lua")
 modules.DropDB={correctionKeys={WOWHEAD=-1,PSERVER=-2}}
 load(dropPrefix.."itemDropCorrections.lua")
 local dropModule=modules.QuestieClassicItemDrops
-local common=decode(dropModule.wowheadData)
+local wowhead=decode(dropModule.wowheadData)
+local common={}
+for item,npcs in pairs(wowhead) do
+    common[item]={};for npc,rate in pairs(npcs) do common[item][npc]=rate end
+end
 local server=decode(dropModule.cmangosData)
 for item,npcs in pairs(server) do
     common[item]=common[item] or {}
@@ -137,7 +141,9 @@ end
 for item,npcs in pairs(modules.QuestieItemDropCorrections.Era) do
     common[item]=common[item] or {}
     for npc,rate in pairs(npcs) do
-        if rate>=0 then common[item][npc]=rate end
+        if rate>=0 then common[item][npc]=rate
+        elseif rate==-1 then common[item][npc]=wowhead[item] and wowhead[item][npc] or nil
+        elseif rate==-2 then common[item][npc]=server[item] and server[item][npc] or nil end
     end
 end
 local data={npc={},object={},item={},zones=z.zoneIDs,maps=map,providers=providerCounts,commonDrops=common}

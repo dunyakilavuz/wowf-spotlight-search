@@ -1,6 +1,8 @@
 {
   "counts": {
+    "auctioneers": 29,
     "common_drop_links_considered": 3495,
+    "drop_rate_links": 15943,
     "instance_sentinels": 2482,
     "item": 21442,
     "item_located": 7563,
@@ -8,6 +10,7 @@
     "item_sources": 621266,
     "item_spawns": 0,
     "item_with_sources": 9995,
+    "items_with_drop_rates": 1249,
     "mapped_spawn_points": 138148,
     "missing_source_references": 383,
     "npc": 13426,
@@ -27,7 +30,7 @@
     "unnamed_skipped": 81
   },
   "files": {
-    "Data/Database.lua": 5856772,
+    "Data/Database.lua": 6121030,
     "Data/Index01.lua": 245086,
     "Data/Index02.lua": 246446,
     "Data/Index03.lua": 251715,

@@ -75,36 +75,91 @@ function Search:NearestSpawn(record, context, nearestCache, cooperate)
     return best
 end
 
+-- Effective acquisition distance, not an invented probability. Physical distance remains
+-- untouched for display. Same-continent priority is enforced before this score.
+function Search:SourceScore(code, location, entity, percent)
+    local distance = location.distance or (location.tier==1 and math.sqrt(location.metric)*10000) or 0
+    if code=="v" then return distance end
+    if code=="o" then return distance*2+300 end
+    local factor=percent and math.min(20,math.max(2,2*math.sqrt(100/math.max(percent,0.01)))) or 6
+    local rank=D.npcRanks and D.npcRanks[entity.index] or 0
+    local rarity=(rank==2 or rank==4 or rank==3) and 3 or (rank==1 and 1.5 or 1)
+    return (distance*factor+800)*rarity
+end
+
+function Search:NearestAuctioneer(context, nearestCache, cooperate)
+    -- This cache belongs to one search, so faction, position and geographic scope agree.
+    if nearestCache.auctionHouse~=nil then
+        local location=nearestCache.auctionHouse
+        return location or nil,location and location.entity or nil
+    end
+    local best
+    for _,index in ipairs(D.auctioneers or {}) do
+        local cached=nearestCache[index]
+        local entity=cached and cached.entity or self:GetRecord(index)
+        -- Unknown friendliness is not proof that an auctioneer is usable. Neutral
+        -- Booty Bay/Gadgetzan/Everlook entries have explicit "AH" (both factions).
+        if entity and (entity.faction=="AH" or (context.faction and entity.faction==context.faction)) then
+            local location=self:NearestSpawn(entity,context,nearestCache,cooperate)
+            if betterLocation(location,best) then best=location end
+        end
+    end
+    nearestCache.auctionHouse=best or false
+    return best,best and best.entity or nil
+end
+
 function Search:Resolve(record, context, nearestCache, cooperate)
     if record.kind ~= "i" then
         return self:NearestSpawn(record,context,nearestCache,cooperate),record,nil
     end
-    local best, source, sourceType, fallback, fallbackType
+    local best,source,sourceType,acquisition,fallback,fallbackType
     local sourceNames = {v="Vendor", d="Mob drop", o="Object loot"}
-    local work = 0
+    -- Only the selected item's direct rates apply: a container's drop rate is NOT
+    -- the probability that its contents include this item. Missing data stays unknown.
+    local rates={}
+    for index,percent in (D.dropRates and D.dropRates[record.index] or ""):gmatch("(%d+),([%d.]+)") do
+        rates[tonumber(index)]=tonumber(percent)
+    end
+    local work=0
     for code,index in record.sources:gmatch("([vdo])(%d+)") do
         index=tonumber(index)
+        local percent=code=="d" and rates[index] or nil
         local cached=nearestCache[index]
-        -- Most broad-item sources have already been examined for another item. Reuse
-        -- the actual decoded entity along with its nearest point, avoiding LRU churn.
-        if cached~=false or not fallback then
+        if percent~=0 and (cached~=false or not fallback) then
             local entity=cached and cached.entity or self:GetRecord(index)
             if entity and self:IsAccessible(entity,context,code=="v") then
                 if not fallback then fallback,fallbackType=entity,sourceNames[code] end
                 local location=cached or self:NearestSpawn(entity,context,nearestCache,cooperate)
-                if betterLocation(location,best) then
-                    best,source,sourceType=location,entity,sourceNames[code]
+                if location then
+                    local score=self:SourceScore(code,location,entity,percent)
+                    if not best or location.tier<best.tier or (location.tier==best.tier and
+                        (score<acquisition.score or (score==acquisition.score and betterLocation(location,best)))) then
+                        best,source,sourceType=location,entity,sourceNames[code]
+                        acquisition={score=score,percent=percent,rank=D.npcRanks and D.npcRanks[index] or 0}
+                    end
                 end
             end
         end
         work=work+1
         if cooperate and work % 64 == 0 then cooperate() end
     end
-    return best, source or fallback, sourceType or fallbackType
+    -- This is a suggestion, not observed auction stock. Quest items are explicitly
+    -- excluded; upstream has no bonding/tradability data for the remaining items.
+    if not best and not (D.questItems and D.questItems[record.index]) then
+        local location,auctioneer=self:NearestAuctioneer(context,nearestCache,cooperate)
+        if location then
+            best,source,sourceType=location,auctioneer,"Auction House"
+            -- Penalize unverified availability in result ranking, particularly for
+            -- distinct item IDs sharing a name with an actually documented vendor.
+            acquisition={score=(location.distance or math.sqrt(location.metric)*10000)+20000,auctionHouse=true}
+        end
+    end
+    return best,source or fallback,sourceType or fallbackType,acquisition
 end
 
 local function better(a,b)
     if a.tier ~= b.tier then return a.tier < b.tier end
+    if a.matchRank ~= b.matchRank then return a.matchRank < b.matchRank end
     if a.metric ~= b.metric then return a.metric < b.metric end
     if a.record.name ~= b.record.name then return a.record.name < b.record.name end
     return a.index < b.index
@@ -172,11 +227,16 @@ function Search:Run(query, context, limit, cooperate)
         if matches then
             local record = self:GetRecord(index)
             if record and self:IsAccessible(record,context,false) then
-                local location,source,sourceType=self:Resolve(record,context,nearestCache,cooperate)
+                local location,source,sourceType,acquisition=self:Resolve(record,context,nearestCache,cooperate)
                 if location or not context.areas then
                     total=total+1
                     local result={index=index,record=record,location=location,source=source,sourceType=sourceType,
-                        tier=location and location.tier or 4,metric=location and location.metric or huge,areas=context.areas}
+                        -- Fully typed names should show the documented vendor variant before
+                        -- an unverified AH/loot variant with the same display name.
+                        matchRank=self:Normalize(record.name)==query and
+                            ((record.kind=="i" and sourceType~="Vendor") and 1 or 0) or 2,
+                        tier=location and location.tier or 4,metric=acquisition and acquisition.score^2 or (location and location.metric or huge),
+                        acquisition=acquisition,areas=context.areas}
                     local pos=#results+1
                     while pos>1 and better(result,results[pos-1]) do pos=pos-1 end
                     if pos<=limit then
@@ -200,11 +260,24 @@ function Search:Describe(result)
     if record.title ~= "" then description=description.." - "..record.title end
     if record.kind == "i" then
         if result.source then
-            description=description.." - "..(result.sourceType or "Source")..": "..result.source.name
+            if result.sourceType=="Auction House" then
+                description=description.." - Buy on Auction House: "..result.source.name
+            else
+                description=description.." - "..(result.sourceType or "Source")..": "..result.source.name
+            end
+            local acquisition=result.acquisition
+            if acquisition and acquisition.percent then
+                description=description..string.format(" (recorded drop %.3g%%)",acquisition.percent)
+            end
+            if acquisition and acquisition.rank and acquisition.rank>0 then
+                local ranks={[1]="Elite",[2]="Rare elite",[3]="Boss",[4]="Rare"}
+                description=description.." ["..(ranks[acquisition.rank] or "Ranked mob").."]"
+            end
         else
             description=description.." - no known vendor, mob or object source"
         end
     end
+    if record.kind=="i" then description=description.." [item #"..record.id.."]" end
     if not location then return description.." | Coordinates unavailable" end
     local place=location.zone..string.format(" (%.1f, %.1f)",location.x*100,location.y*100)
     if location.distance then
@@ -217,5 +290,6 @@ function Search:Describe(result)
     else
         place=place.." - distance unavailable"
     end
+    if result.sourceType=="Auction House" then place=place.." | Availability/tradability unverified" end
     return description.." | "..place
 end

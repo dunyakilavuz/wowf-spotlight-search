@@ -38,7 +38,7 @@ The top-level keys are:
   not Mainline raw NPC flag values. Flight master=8, trainer=16, innkeeper=128,
   banker=256, repair=16384, vendor=4.
 - `object`: object ID -> `name`, `spawns`, `zoneID`.
-- `item`: item ID -> `name`, `npcDrops`, `objectDrops`, `vendors`, `itemDrops`.
+- `item`: item ID -> `name`, `npcDrops`, `objectDrops`, `vendors`, `itemDrops`, `class` (12=quest item).
   ID arrays can be JSON arrays; `itemDrops` refers to container item IDs. Physical
   sources are recursively resolved with cycle detection.
 - `maps`: AreaID -> **UiMapID**, not world MapID.
@@ -61,4 +61,13 @@ points but are not tracked live. Phase annotations are not evaluated by Searchli
 `--flavor era` is a developer rebuild option, selecting the Classic raw/Static inputs
 and Interface 11509. It overwrites the generated database/TOC. Do not ship both flavors
 as the same artifact without rebuilding/testing each: Forever coordinates differ.
-The checked-in v0.1.0 data is Forever, and the main harness validates that flavor.
+The checked-in v0.1.1 data is Forever, and the main harness validates that flavor.
+
+## Generated schema 3 supplements
+
+`D.auctioneers` contains row indices of mapped, flag-4096 NPCs with explicit A/H/AH
+friendliness. `D.npcRanks` stores only non-normal ranks. `D.questItems` is a compact
+class-12 exclusion set. `D.dropRates[itemRow]` stores `npcRow,percent;...` for available
+validated 0..100 rates, honoring upstream manual WOWHEAD/PSERVER selectors and zero
+corrections. Missing, invalid or unsupported percentages remain unknown. Nine-field
+entity rows and the physical source graph keep their existing compact representation.

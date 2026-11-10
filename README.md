@@ -1,7 +1,7 @@
-# Searchlight v0.1.0
+# Searchlight v0.1.1
 
 **Spotlight for Azeroth:** Ctrl+Space, type an English NPC, item, object or service,
-then Enter/click to place a waypoint at its nearest known source.
+then Enter/click to waypoint to a nearby known source (reliable vendors preferred).
 
 This repository targets **WoW: Forever**, not an unchanged Classic Era client. Current
 upstream Questie has a dedicated Forever TOC with **Interface 16001**. Forever shares
@@ -34,14 +34,25 @@ optional; native pins work when the client/map exposes the relevant APIs.
 - Partial words work: `fishing tra`. Words match at their starts, not fuzzy substrings.
 - City/zone names work too: `thunder bluff`, `thunder bl`, or
   `fishing trainer thunder bluff`. An explicit zone constrains locations to that zone.
-- Item results show **Vendor / Mob drop / Object loot** and the source's English name.
+- Item results show **Vendor / Mob drop / Object loot / Auction House** and the source's
+  English name. Missing physical coordinates trigger a faction-safe AH suggestion.
+- `elixir of the mongoose` (item #13452) and original `swiftness potion` (#2459) now
+  route to the nearest usable auctioneer when no physical source can be pinned.
+  Neutral Booty Bay, Gadgetzan and Everlook auctioneers count for both factions.
+- **AH?** means a suggestion, not a checked listing. Tradability, stock and prices are
+  unverified. Known quest items are excluded; other soulbound items cannot be identified
+  from this dataset. A known physical source elsewhere prevents the AH fallback.
+- Same-name items remain separate and show their **item IDs**. Do not assume different
+  IDs have the same purchase/use restrictions. Exact names outrank recipe-name matches.
 - `/searchlight status` prints client/build, Interface, map/world, database revision
   and waypoint API availability for troubleshooting.
 
 Distances are **straight-line yards**, not walkable routes or travel time. Results on
-our current world/continent sort first; other-continent locations are labeled and use
-stable name order, since their distances are not comparable. The palette refreshes as
-you move; clicking re-resolves the source with a fresh position, retaining a zone filter.
+your current world/continent sort first; other-continent locations are labeled, without
+comparing their distances. Within a tier, exact-name matches and documented vendor
+variants are preferred; item sources use a reliability-weighted distance rather than
+raw nearest-drop distance. Ordinary NPC/object locations still sort by proximity. The
+palette refreshes as you move; clicking re-resolves the source with a fresh position, retaining a zone filter.
 
 The addon has **no SavedVariables**. WoW saves the key binding using its own binding
 system. Without a SavedVariable first-run flag, an entirely unbound Searchlight action
@@ -64,7 +75,8 @@ are vendored, not downloaded in-game.
 138,148 points have an AreaID -> UiMapID mapping; one object's point is unmapped.
 9,995 items have known physical source links; 7,563 have a source with usable coordinate
 data. The compiled graph has 621,266 source relationships. This is **not a complete
-all-item/all-NPC game catalog**, and missing locations are explicitly shown as unavailable.
+all-item/all-NPC game catalog**. Missing physical item locations may instead show an
+unverified AH suggestion; other missing locations are explicitly unavailable.
 2,482 instance-presence sentinels and 81 unnamed records were excluded. 383 encountered
 source references do not resolve to named shipped entities. See
 `Searchlight/Data/coverage.json` for exact machine-readable counts and file sizes.
@@ -96,15 +108,15 @@ are not evaluated. See [data provenance](THIRD_PARTY_NOTICES.md) and
   and intersect them, rather than scanning all names.
 - 55,791 prefixes; deduplicated, delta-coded postings and shared spawn/source string
   pools. Metadata has a bounded 512-record decode cache. No external Lua libraries.
-- Top 10 is selected **after** nearest-source ranking. Map coordinates are projected
+- Top 10 is selected **after** source-quality/distance ranking. Map coordinates are projected
   into world space via `C_Map.GetWorldPosFromMapPos`; cached affine map bases avoid
   calling the API per spawn. No cross-zone percentage-distance comparisons.
 - Typing is throttled by 40 ms. Broad searches run incrementally with a roughly 4 ms
   cooperative CPU budget per frame; GC/single operations can exceed that target.
-- About **16.2 MiB retained** for the database/modules and **16.7 MiB warm** including
+- About **16.8 MiB retained** for the database/modules and **17.3 MiB warm** including
   palette/cache in standalone Lua 5.1 tests. This is an estimate, not in-client addon
-  memory accounting. No addon SavedVariables. Generated data is approximately **8.8 MiB
-  on disk**; the complete installed addon is approximately **8.9 MiB**.
+  memory accounting. No addon SavedVariables. Generated data is approximately **9.0 MiB
+  on disk**; the complete installed addon is approximately **9.1 MiB**.
 - The data is eagerly loaded, not a separate load-on-demand addon. At this size, retaining
   a single install folder and avoiding first-open disk/parsing stalls is the v1 tradeoff.
   Deduplicated strings reduce memory instead of materializing all spawns/index postings
@@ -126,11 +138,29 @@ The Lua source adapter runs in a capability-limited environment with no `io`, `o
 Era data/Interface 11509; the checked-in build and main test harness are for Forever.
 
 Tests cover actual database queries, every requested profession/class role, world-space
-and cross-continent ordering, geographic scoping, vendor/mob/object selection, moved-player
-re-resolution, unavailable positions/instances, native+TomTom waypoints, safe bindings,
+and cross-continent ordering, geographic scoping, vendor/mob/object reliability, potion
+AH fallback, faction/neutral auctioneers, moved-player re-resolution, unavailable positions/instances, native+TomTom waypoints, safe bindings,
 and palette keyboard/slash behavior using stubbed WoW APIs. See
 [validation results](docs/VALIDATION.md). **Follow the [in-game checklist](docs/IN_GAME_TESTING.md)**
 for actual client validation; offline tests cannot prove UI appearance or live map accuracy.
+
+## Item source policy and crafting data
+
+Known opposite-faction vendors are filtered. Within the same continent, a vendor can
+beat a closer low-chance drop; an extremely close drop can still win over a very distant
+vendor. Questie rates are shipped for the subset with usable percentage data; missing
+rates use a conservative heuristic, not a fabricated percentage. Rare/boss/elite NPC
+ranks are penalized. **Vendor stock, limited supply and purchase/use restrictions are
+not known.** Exact-name vendor variants rank ahead of same-name AH suggestions.
+
+Kyleen's Greater Healing Potion is **#223914**; the original potion is **#1710** and has
+different vendor links. We preserve that distinction instead of incorrectly attaching
+Kyleen to #1710. Check the displayed ID and actual in-game restrictions before traveling.
+
+The pinned sources contain **no usable item -> creating spell/profession/required-skill
+mapping**. `Crafted: Alchemy (skill N)` and alternative crafting-trainer routing are
+therefore **not implemented**; no profession/skill is guessed from a potion's name.
+See [the detailed policy](docs/SOURCE_POLICY.md) and [validation examples](docs/VALIDATION.md).
 
 ## Repository layout
 
@@ -157,10 +187,12 @@ LICENSE                   GPLv3 text
 
 - English names/ASCII tokenization only. Not a fuzzy search, quest tracker, drop-rate
   optimizer, route planner, live-stock detector, or phase/quest-state-aware database.
+  Rate percentages are historical upstream observations, not live Forever drop guarantees.
 - Known opposite-faction services/vendors are filtered. Unknown faction, class/race,
   reputation, limited stock, season and quest restrictions can still affect usability.
 - Instance-only presence markers are not turned into fictional coordinates or guessed
-  dungeon entrances. A no-source result cannot place a waypoint.
+  dungeon entrances. Item results may instead suggest an AH; no usable AH/physical
+  coordinates means no waypoint.
 - Without player/world position, distances are hidden and the nearest spawn cannot be
   guaranteed; known locations can still be viewed/pinned. Same-map fallbacks are labeled.
 - Spawn coordinates are quantized to 0.01 map-percent. Moving NPCs/resources represent

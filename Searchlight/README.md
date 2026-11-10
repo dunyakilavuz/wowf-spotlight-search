@@ -1,4 +1,4 @@
-# Searchlight v0.1.0
+# Searchlight v0.1.1
 
 ## Install
 
@@ -14,6 +14,15 @@ The shipped data/TOC targets **Forever Interface 16001**, not unchanged Classic 
 - Type 2+ English characters; Up/Down selects, Enter or click sets a waypoint, Esc closes.
 - Examples: `fishing trainer`, `flight master`, `repair`, `innkeeper`, `mailbox`, `bank`,
   `mining trainer`, `mage trainer`, `linen cloth`, `copper vein`, `thunder bluff`.
+- Items show their source and ID. Vendors are preferred to incidental low-chance drops
+  when reasonably near; very distant vendors do not always beat a nearby physical drop.
+- Original `elixir of the mongoose` (#13452) / `swiftness potion` (#2459) with no usable
+  physical-source coordinates suggest the nearest faction-safe Auction House instead.
+  Neutral Booty Bay/Gadgetzan/Everlook auctioneers are valid for both factions.
+- **AH?** is an unverified suggestion: listing availability, tradability and prices are
+  unknown. Known quest items are excluded; other soulbound items cannot be identified.
+- Same-name item IDs remain separate. Kyleen sells Greater Healing Potion #223914, not
+  the original #1710; verify purchase/use restrictions in-game.
 - `/searchlight status` prints build/map/API information for troubleshooting.
 - Rebind Searchlight under the game's key-binding settings. Other commands are never
   overwritten. An otherwise entirely unbound action gets the free default again on login.
@@ -23,7 +32,10 @@ The shipped data/TOC targets **Forever Interface 16001**, not unchanged Classic 
 The bundled 41,833 named NPC/item/object records are **partial community data**, not a
 complete live game catalog. Item locations come from known vendors, mobs or containers.
 Positions represent possible spawn points, not current availability. Some sources,
-instances and new Forever content have no trustworthy coordinates and cannot be pinned.
+instances and new Forever content have no trustworthy physical coordinates; item results
+may suggest an AH, otherwise no pin is invented. AH stock/tradability and vendor stock
+are not verified. Crafting profession/skill information is absent from the pinned data
+and is not inferred from names.
 Quest/phase/season, reputation, race/class and stock restrictions are not modeled.
 Known opposite-faction services are excluded; unknown restrictions may still matter.
 
@@ -34,7 +46,7 @@ TomTom is optional. The addon has no SavedVariables; WoW saves the key binding i
 
 Offline tests passed, but the addon still needs **in-game testing** for appearance,
 map-coordinate accuracy and actual waypoint behavior. Retained memory was approximately
-16.2 MiB in standalone Lua 5.1, not measured inside WoW.
+16.8 MiB in standalone Lua 5.1, not measured inside WoW.
 
 ## Source and license
 

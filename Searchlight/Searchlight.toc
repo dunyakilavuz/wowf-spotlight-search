@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: Searchlight
-## Version: 0.1.0
+## Version: 0.1.1
 ## Author: Searchlight contributors
 ## Notes: Spotlight-like NPC, item and object search with nearest-source waypoints.
 ## OptionalDeps: TomTom
