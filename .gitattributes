@@ -1,0 +1,4 @@
+* text=auto eol=lf
+vendor/** -text linguist-vendored=true
+Searchlight/Data/*.lua linguist-generated=true
+Searchlight/Data/coverage.json linguist-generated=true

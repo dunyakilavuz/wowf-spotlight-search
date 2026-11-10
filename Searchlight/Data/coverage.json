@@ -1,0 +1,76 @@
+{
+  "counts": {
+    "common_drop_links_considered": 3495,
+    "instance_sentinels": 2482,
+    "item": 21442,
+    "item_located": 7563,
+    "item_mapped": 7563,
+    "item_sources": 621266,
+    "item_spawns": 0,
+    "item_with_sources": 9995,
+    "mapped_spawn_points": 138148,
+    "missing_source_references": 383,
+    "npc": 13426,
+    "npc_located": 8509,
+    "npc_mapped": 8509,
+    "npc_spawns": 86943,
+    "object": 6965,
+    "object_located": 4783,
+    "object_mapped": 4782,
+    "object_spawns": 51206,
+    "prefixes": 55791,
+    "rows": 41833,
+    "unique_posting_lists": 21026,
+    "unique_source_lists": 4995,
+    "unique_spawn_lists": 12780,
+    "unmapped_spawn_points": 1,
+    "unnamed_skipped": 81
+  },
+  "files": {
+    "Data/Database.lua": 5856772,
+    "Data/Index01.lua": 245086,
+    "Data/Index02.lua": 246446,
+    "Data/Index03.lua": 251715,
+    "Data/Index04.lua": 261682,
+    "Data/Index05.lua": 166437,
+    "Data/Postings.lua": 2180900
+  },
+  "flavor": "forever",
+  "forever_zones": {
+    "16591": {
+      "npc": 197,
+      "object": 13,
+      "spawn_pairs": 445
+    },
+    "16593": {
+      "npc": 314,
+      "object": 44,
+      "spawn_pairs": 7678
+    },
+    "16651": {
+      "npc": 28,
+      "spawn_pairs": 60
+    },
+    "616": {
+      "npc": 90,
+      "object": 6,
+      "spawn_pairs": 154
+    }
+  },
+  "providers": {
+    "src/corrections/Forever/foreverItemFixes.lua": 47,
+    "src/corrections/Forever/foreverNPCFixes.lua": 307,
+    "src/corrections/Forever/foreverObjectFixes.lua": 114,
+    "src/corrections/Forever/generated/foreverBaseItem.lua": 8261,
+    "src/corrections/Forever/generated/foreverBaseNpc.lua": 3535,
+    "src/corrections/Forever/generated/foreverBaseObject.lua": 313,
+    "src/corrections/Forever/legacy/classicItemFixes.lua": 405,
+    "src/corrections/Forever/legacy/classicNPCFixes.lua": 985,
+    "src/corrections/Forever/legacy/classicObjectFixes.lua": 139,
+    "src/corrections/Forever/traces/foreverItemTraces.lua": 857,
+    "src/corrections/Forever/traces/foreverNpcTraces.lua": 1593,
+    "src/corrections/Forever/traces/foreverObjectTraces.lua": 127
+  },
+  "revision": "ae4404b01a45163d3ef05909395b29aafc437bc2",
+  "source": "Questie/QuestieDB"
+}

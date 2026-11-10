@@ -1,0 +1,5 @@
+<Bindings>
+    <Binding name="SEARCHLIGHT_TOGGLE" header="SEARCHLIGHT">
+        if Searchlight then Searchlight:Toggle() end
+    </Binding>
+</Bindings>

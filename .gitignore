@@ -1,0 +1,9 @@
+.build/
+upstream/
+dist/
+__pycache__/
+*.py[cod]
+*.luac
+.DS_Store
+.idea/
+.vscode/
