@@ -3,7 +3,7 @@
 All notable changes are listed here. The release workflow uploads this file as the
 CurseForge/Wago changelog (`manual-changelog` in `.pkgmeta`), so update it before tagging.
 
-## v0.1.2 — unreleased
+## v0.1.2 — 2026-11-12
 
 - Async-safe result icons (NPC, item, object, auction-house and fallback textures).
 - Original Searchlight logo: in-game `Media/Icon.tga` (TOC `IconTexture`) and docs/logo.png.
