@@ -43,6 +43,7 @@ class MediaTests(unittest.TestCase):
         self.assertIn(r'## IconTexture: Interface\AddOns\Searchlight\Media\Icon',toc)
         self.assertLess(toc.index('Icons.lua'),toc.index('UI.lua'))
         self.assertIn('docs/logo.png',(ROOT/'README.md').read_text())
-        self.assertIn('## Version: 0.1.2',toc)
+        self.assertIn('## Version: @project-version@',toc)
+        self.assertNotIn('\n## X-Curse-Project-ID:',toc)
 
 if __name__=='__main__':unittest.main()

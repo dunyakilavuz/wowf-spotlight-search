@@ -2,7 +2,9 @@
 local _, namespace = ...
 local SL = namespace or {}
 _G.Searchlight = SL
-SL.version = "0.1.2"
+-- The packager substitutes the tag (e.g. v0.2.0); unpackaged checkouts report "dev".
+local version = "@project-version@"
+SL.version = version:find("@", 1, true) and "dev" or version
 SL.DB = {}
 SL.MAX_RESULTS = 10
 SL.MIN_QUERY_LENGTH = 2

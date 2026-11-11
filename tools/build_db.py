@@ -313,9 +313,12 @@ def main():
                 out.write(f'P[{lua(prefix)}]=L[{posting_for[prefix]}]\n')
             if start+12000>=len(sorted_prefixes):out.write('Searchlight.DB._postings = nil\n')
     interface=16001 if args.flavor=='forever' else 11509
-    toc=[f'## Interface: {interface}','## Title: Searchlight',r'## IconTexture: Interface\AddOns\Searchlight\Media\Icon','## Version: 0.1.2',
+    toc=[f'## Interface: {interface}','## Title: Searchlight',r'## IconTexture: Interface\AddOns\Searchlight\Media\Icon','## Version: @project-version@',
          '## Author: Searchlight contributors','## Notes: Spotlight-like NPC, item and object search with nearest-source waypoints.',
-         '## OptionalDeps: TomTom','## X-License: GPL-3.0-only','Init.lua']
+         '## OptionalDeps: TomTom','## X-License: GPL-3.0-only',
+         '# TODO: once the CurseForge project exists, either add "## X-Curse-Project-ID: <id>" here',
+         '# (and "## X-Wago-ID: <id>" for Wago) or set repository variables CF_PROJECT_ID / WAGO_PROJECT_ID.',
+         'Init.lua']
     toc+=['Data/'+f for f in generated]+['Search.lua','Navigation.lua','Icons.lua','UI.lua','Core.lua','Bindings.xml']
     (ROOT/'Searchlight/Searchlight.toc').write_text('\n'.join(toc)+'\n')
     report={'source':lock['repository'],'revision':lock['revision'],'flavor':args.flavor,

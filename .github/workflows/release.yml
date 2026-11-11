@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Packages and publishes Searchlight for WoW: Forever when a v* tag is pushed.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # create the GitHub release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }} # optional; Wago upload is skipped without it
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out (full history for changelog/version)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Package and publish (Forever)
+        uses: BigWigsMods/packager@v2
+        with:
+          # -g forever: Interface 16001 -> CurseForge game version 1.60.1 (type 88568).
+          # Project IDs come from repository variables so the TOC needs no edit:
+          #   CF_PROJECT_ID   (CurseForge numeric project ID)
+          #   WAGO_PROJECT_ID (Wago Addons project ID, optional)
+          args: >-
+            -g forever
+            ${{ vars.CF_PROJECT_ID && format('-p {0}', vars.CF_PROJECT_ID) || '' }}
+            ${{ vars.WAGO_PROJECT_ID && format('-a {0}', vars.WAGO_PROJECT_ID) || '' }}

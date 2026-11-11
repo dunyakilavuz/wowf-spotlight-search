@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# BigWigsMods/packager configuration. The installable addon lives in Searchlight/;
+# move-folders lifts it to the zip root so the archive contains only Searchlight/.
+package-as: Searchlight
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+move-folders:
+  Searchlight/Searchlight: Searchlight
+
+ignore:
+  - .github
+  - .build
+  - .release
+  - .gitignore
+  - .pkgmeta
+  - tools
+  - tests
+  - vendor
+  - docs
+  - upstream
+  - dist
+  - README.md
+  - CHANGELOG.md
+  - LICENSE

@@ -187,6 +187,9 @@ tools/                    Python builder/check runner, sandboxed Lua adapter, so
   overlay.example.json    Empty, provenance-required overlay template
 tests/                    Offline Lua harness and Python compiler/integrity tests
 docs/                     Validation, icon manifest, 512px logo.png and client/data notes
+.github/workflows/        release.yml: package and publish on v* tags
+.pkgmeta                  Packager layout (zip contains only Searchlight/)
+CHANGELOG.md              Release notes uploaded with each release
 LICENSE                   GPLv3 text
 ```
 
@@ -204,6 +207,11 @@ compact database has no game-object type; unknown new objects keep a generic gly
 See [the complete texture manifest and confidence notes](docs/ICONS.md). All icon APIs
 are optional/guarded, missing textures fall back to a question mark when detectable,
 and only visible item rows request data. No SavedVariables/icon catalog is added.
+
+## Releasing
+
+Tagging `v*` publishes to CurseForge (optionally Wago) and GitHub Releases through
+BigWigsMods/packager. See [docs/RELEASING.md](docs/RELEASING.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ## Known limitations
 
