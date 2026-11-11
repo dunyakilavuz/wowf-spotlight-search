@@ -316,8 +316,7 @@ def main():
     toc=[f'## Interface: {interface}','## Title: Searchlight',r'## IconTexture: Interface\AddOns\Searchlight\Media\Icon','## Version: @project-version@',
          '## Author: Searchlight contributors','## Notes: Spotlight-like NPC, item and object search with nearest-source waypoints.',
          '## OptionalDeps: TomTom','## X-License: GPL-3.0-only',
-         '# TODO: once the CurseForge project exists, either add "## X-Curse-Project-ID: <id>" here',
-         '# (and "## X-Wago-ID: <id>" for Wago) or set repository variables CF_PROJECT_ID / WAGO_PROJECT_ID.',
+         '## X-Curse-Project-ID: 1799220',
          'Init.lua']
     toc+=['Data/'+f for f in generated]+['Search.lua','Navigation.lua','Icons.lua','UI.lua','Core.lua','Bindings.xml']
     (ROOT/'Searchlight/Searchlight.toc').write_text('\n'.join(toc)+'\n')

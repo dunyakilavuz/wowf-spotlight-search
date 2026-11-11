@@ -44,6 +44,6 @@ class MediaTests(unittest.TestCase):
         self.assertLess(toc.index('Icons.lua'),toc.index('UI.lua'))
         self.assertIn('docs/logo.png',(ROOT/'README.md').read_text())
         self.assertIn('## Version: @project-version@',toc)
-        self.assertNotIn('\n## X-Curse-Project-ID:',toc)
+        self.assertIn('\n## X-Curse-Project-ID: 1799220\n',toc)
 
 if __name__=='__main__':unittest.main()
