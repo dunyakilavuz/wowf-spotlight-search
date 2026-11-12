@@ -232,6 +232,10 @@ BigWigsMods/packager. See [docs/RELEASING.md](docs/RELEASING.md) and [CHANGELOG.
 - Forever Interface 16001 is corroborated by Questie's live Forever TOC, not by launching
   the game here. Retest after a patch; do not silently reuse Era coordinates on Forever.
 
+## Support
+
+Searchlight is free. If you'd like to support development, you can [buy me a coffee](https://buymeacoffee.com/dunyakilavuz).
+
 ## License
 
 GPL version 3 for Searchlight, with included source and attribution. **Upstream expressly
